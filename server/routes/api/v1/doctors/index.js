@@ -5,6 +5,17 @@ const express = require('express');
 const router = express.Router();
 const timediff = require('timediff');
 
+elastic.indexExists().then(function (exists) {
+    if (exists) {
+        console.log('delete');
+        return elastic.deleteIndex();
+    }
+}).then(function () {
+    return elastic.initIndex().then(elastic.initMapping).then(function () {
+      console.log('finished');
+    });
+});
+
 async function fetchDoctor(name){
   let result = {};
   try {
@@ -29,10 +40,6 @@ async function fetchDoctor(name){
 
 router.get('/search', async function (req, res, next) {
   //is doctor data, not expired, etag still ok, then return from cache, else get from the API and return
-  let index = await elastic.indexExists();
-  index && await elastic.deleteIndex(index);
-  await elastic.initIndex();
-  await elastic.initMapping();
   if ( !req.query.name ){
     res.json({error: 'error, please provide a full (first and last) name'});
     return;
@@ -49,7 +56,6 @@ router.get('/search', async function (req, res, next) {
 
   elastic.getDoctor( nameObj )
     .then(async function (result) {
-
       let expiredContent = result.hits.hits.filter(function(hit){
         let diff = timediff( (new Date()).toString(), hit._source.retrieveDate, 'YDHms');
         return diff.days > config.maxExpire;
@@ -57,10 +63,10 @@ router.get('/search', async function (req, res, next) {
 
       //re-get data if it's expired
       if (result.hits.total && expiredContent.length === 0 ){
-        res.json(result);
+        res.json({type: 'localDb', result});
       } else {
         var doctors = await fetchDoctor(nameObj);
-        res.json(doctors);
+        res.json({type: 'APICall', doctors});
       }
     })
     .catch(function (error){
