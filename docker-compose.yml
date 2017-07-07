@@ -1,0 +1,14 @@
+version: '2'
+
+services:
+  server:
+    build: server
+    ports:
+      - "3000:3000"
+    links:
+      - elasticsearch
+
+  elasticsearch:
+    image: elasticsearch
+    ports:
+      - '9200:9200'
