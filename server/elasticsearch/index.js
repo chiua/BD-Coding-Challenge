@@ -80,12 +80,3 @@ function getDoctor(name) {
   })
 }
 exports.getDoctor = getDoctor;
-
-async function initElastic(){
-  let index = await indexExists();
-  index && await deleteIndex(index);
-  await initIndex();
-  await initMapping();
-}
-
-initElastic();

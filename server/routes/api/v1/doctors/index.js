@@ -27,8 +27,12 @@ async function fetchDoctor(name){
   return result;
 }
 
-router.get('/search', function (req, res, next) {
+router.get('/search', async function (req, res, next) {
   //is doctor data, not expired, etag still ok, then return from cache, else get from the API and return
+  let index = await elastic.indexExists();
+  index && await elastic.deleteIndex(index);
+  await elastic.initIndex();
+  await elastic.initMapping();
   if ( !req.query.name ){
     res.json({error: 'error, please provide a full (first and last) name'});
     return;
